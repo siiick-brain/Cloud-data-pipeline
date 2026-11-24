@@ -19,7 +19,7 @@ from tests.conftest import ROOT
 
 pytestmark = pytest.mark.integration
 
-os.environ.setdefault("KAFKA_BOOTSTRAP", "localhost:9094")
+os.environ.setdefault("KAFKA_BOOTSTRAP", "127.0.0.1:9094")
 os.environ.setdefault("REDIS_URL", f"redis://:{os.environ.get('REDIS_PASSWORD', '')}@localhost:6379/0")
 CONF = {"bootstrap.servers": os.environ["KAFKA_BOOTSTRAP"]}
 

@@ -6,7 +6,7 @@
 | Service | Inside compose | From host | mem_limit |
 |---|---|---|---|
 | postgres | postgres:5432 | localhost:5432 | 900m |
-| kafka | kafka:9092 | localhost:9094 | 800m |
+| kafka | kafka:9092 | 127.0.0.1:9094 (not localhost: Windows tries IPv6 first) | 800m |
 | redis | redis:6379 | localhost:6379 | 200m |
 | consumer | runs `python -m ingest.consumer` | none | 300m |
 | spark | spark:8000 trigger service | none | 1500m |
@@ -26,7 +26,7 @@ There is no separate producer service. The producer runs inside the consumer con
 | Var | Used by | Value in compose |
 |---|---|---|
 | WAREHOUSE_URL | ingest, dags, quality, governance | postgresql://pipeline:...@postgres:5432/warehouse |
-| KAFKA_BOOTSTRAP | ingest | kafka:9092 (host: localhost:9094) |
+| KAFKA_BOOTSTRAP | ingest | kafka:9092 (host: 127.0.0.1:9094) |
 | REDIS_URL | ingest | redis://:pw@redis:6379/0 |
 | OTEL_EXPORTER_OTLP_ENDPOINT | ingest, dags, spark | http://otel-collector:4318 |
 | OTEL_SERVICE_NAME | all instrumented code | see metrics.md |
