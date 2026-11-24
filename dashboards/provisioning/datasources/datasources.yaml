@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: warehouse
+    uid: warehouse
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: grafana_ro
+    jsonData:
+      database: warehouse
+      sslmode: disable
+    secureJsonData:
+      password: ${GRAFANA_DB_PASSWORD}
+    isDefault: true
+
+  - name: prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
