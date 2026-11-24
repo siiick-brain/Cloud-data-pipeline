@@ -43,8 +43,12 @@ def seed(conn) -> dict[str, int]:
 
 
 def main() -> None:
-    with psycopg2.connect(os.environ["WAREHOUSE_URL"]) as conn:
+    # seed() owns the transaction, so main only opens and closes the connection
+    conn = psycopg2.connect(os.environ["WAREHOUSE_URL"])
+    try:
         print(seed(conn))
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
