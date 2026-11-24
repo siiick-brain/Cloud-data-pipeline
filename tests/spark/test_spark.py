@@ -196,8 +196,12 @@ def test_trigger_runs_one_job_at_a_time(server, monkeypatch):
 
 @pytest.mark.integration
 def test_bronze_reads_raw_over_jdbc(spark, root, monkeypatch):
-    monkeypatch.setenv("JDBC_PASSWORD", os.environ.get("PIPELINE_DB_PASSWORD", ""))
+    if not os.environ.get("JDBC_PASSWORD"):
+        monkeypatch.setenv("JDBC_PASSWORD", os.environ.get("PIPELINE_DB_PASSWORD", ""))
     df = jobs.read_raw(spark)
     assert [f.name for f in df.schema] == ["event_id", "payload", "load_date"]
-    n = jobs.bronze(spark)
-    assert n == df.count()
+    read = df.count()
+    jobs.bronze(spark)
+    # raw can grow while the test runs, so check no duplicates and nothing missing
+    bronze = spark.read.format("delta").load(jobs.table_path("bronze.order_events"))
+    assert bronze.count() == bronze.select("event_id").distinct().count() >= read
