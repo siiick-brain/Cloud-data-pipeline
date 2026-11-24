@@ -1,0 +1,204 @@
+{
+  "uid": "quality",
+  "title": "Data quality",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "tags": [
+    "pipeline"
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "refresh": "1m",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Checks passing (latest run)",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT avg(passed::int) AS pass_rate FROM quality.dq_results WHERE run_id = (SELECT run_id FROM quality.dq_results ORDER BY checked_at DESC LIMIT 1)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Average score (latest run)",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT avg(score) AS score FROM quality.dq_results WHERE run_id = (SELECT run_id FROM quality.dq_results ORDER BY checked_at DESC LIMIT 1)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Failed checks in range",
+      "type": "stat",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS failed FROM quality.dq_results WHERE NOT passed AND $__timeFilter(checked_at)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Score by check",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT checked_at AS time, check_name || ' ' || table_name AS metric, score FROM quality.dq_results WHERE $__timeFilter(checked_at) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Latest result per check",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (check_name, table_name) check_name, table_name, passed, score, observed, threshold, checked_at FROM quality.dq_results ORDER BY check_name, table_name, checked_at DESC"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Recent failures",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "warehouse"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "warehouse"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT checked_at, run_id, dag_id, check_name, table_name, observed, threshold, details FROM quality.dq_results WHERE NOT passed AND $__timeFilter(checked_at) ORDER BY checked_at DESC LIMIT 50"
+        }
+      ]
+    }
+  ]
+}

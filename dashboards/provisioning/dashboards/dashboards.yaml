@@ -1,0 +1,10 @@
+apiVersion: 1
+
+# One provider for the whole folder: sales.json, quality.json and pipeline-health.json.
+providers:
+  - name: pipeline
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
