@@ -51,3 +51,19 @@ The unknown members (-1) use the literal value `Unknown` for every text column.
 | pipeline | read and write on raw, staging, dw, gold, quality, governance |
 | mcp_ro | SELECT on quality.dq_results, CONNECT on airflow db and SELECT on its dag_run table |
 | grafana_ro | SELECT on dw, gold and quality |
+
+## Retention
+`retention_days` comes from governance.catalog (loaded from docs/data_dictionary.csv). A row is past retention when its age column is older than now() minus retention_days.
+
+| Table | Age column |
+|---|---|
+| raw.order_events | received_at |
+| dw.fact_order_line | occurred_at |
+| gold.daily_sales | load_date |
+| gold.product_sales | load_date |
+| quality.dq_results | checked_at |
+
+Every other table is exempt: raw master data and dimensions hold current state or SCD history, staging is truncated each run, dim_date is static and the catalog is metadata.
+
+## Jobs
+`sql/load_dimensions.sql` runs as task `load_dimensions` in DAG `etl_orders`.
