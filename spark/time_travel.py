@@ -30,8 +30,8 @@ def demo(spark: SparkSession, path: str) -> dict:
 
     DeltaTable.forPath(spark, path).delete()  # v2: someone breaks the table
     broken = spark.read.format("delta").load(path).count()
-    v0 = spark.sql(f"SELECT * FROM delta.`{path}` VERSION AS OF 0").count()
-    spark.sql(f"RESTORE TABLE delta.`{path}` TO VERSION AS OF 1")
+    v0 = spark.read.format("delta").option("versionAsOf", 0).load(path).count()
+    DeltaTable.forPath(spark, path).restoreToVersion(1)
     restored = spark.read.format("delta").load(path).count()
     return {"bad_write_rejected": rejected, "rows_v0": v0, "rows_broken": broken, "rows_restored": restored}
 
