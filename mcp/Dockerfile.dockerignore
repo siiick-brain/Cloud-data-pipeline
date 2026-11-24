@@ -1,0 +1,5 @@
+*
+!pyproject.toml
+!uv.lock
+!mcp/pipeline_mcp/
+mcp/**/__pycache__

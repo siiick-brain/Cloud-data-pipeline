@@ -1,0 +1,27 @@
+# Pipeline MCP server: security review
+
+Scope: `mcp/pipeline_mcp/server.py`, `mcp/Dockerfile`, compose service `mcp`. Contract: `docs/contracts/mcp_tools.md`.
+Checklist: OWASP MCP Top 10 (MCP01 to MCP10). Tests: `tests/mcp/test_server.py` (63 tests, 100 percent line and branch coverage of `mcp/`).
+
+Result: no open high or medium findings. Three low findings are accepted (listed at the end).
+
+| Item | Status | Evidence |
+|---|---|---|
+| MCP01 Token mismanagement and secret exposure | Mitigated | Token only from env `MCP_TOKEN`; `main()` exits when it is empty (`test_main_refuses_to_start_without_token`). Compared with `hmac.compare_digest`. Audit records hold only tool args, origin, status, counts and timing, never headers, token or DB URLs (`test_audit_log_records_calls_without_secrets`, `test_denied_requests_are_audited_without_token`). DB errors are replaced by a generic `<tool> failed` raised `from None`, so driver text with credentials never reaches the caller or the log (`test_db_failure_returns_generic_error`). `.env` is excluded by `.dockerignore` and `mcp/Dockerfile.dockerignore`. |
+| MCP02 Privilege escalation via scope creep | Mitigated | Exactly three read-only tools (`test_exactly_three_tools_are_listed`). DB role `mcp_ro` has SELECT on `quality.dq_results` and `dag_run` only (tables.md). Each session also sets `default_transaction_read_only=on` and `statement_timeout=5000` (`test_pipeline_status_newest_first` checks the options). Delta volume is mounted `:ro`. Container runs as uid 10001. |
+| MCP03 Tool poisoning | Mitigated | Tool names, descriptions and schemas are static code; no dynamic tool registration, no tool list change notifications, no remote tool sources. |
+| MCP04 Supply chain and dependency tampering | Mitigated | Image deps come from `uv export --frozen` of the committed `uv.lock` and install with `pip --require-hashes`. Base image pinned to `python:3.11.18-slim`, uv image pinned to `0.9.5`. `hadolint mcp/Dockerfile` is clean. `pip-audit` is in the dev group for CI. |
+| MCP05 Command injection and execution | Mitigated | No shell, subprocess, eval or dynamic import. SQL is two fixed strings with psycopg2 bound parameters; no string-built SQL (`test_no_string_built_sql_in_source`). `gold_query` maps the name through a dict allowlist and reads Delta with pyarrow filter expressions, not SQL. Params are checked by exact key set, type, range and `re.fullmatch` with ASCII-only classes; rejected input reads nothing (`test_gold_rejects_unknown_query_and_bad_params` patches `DeltaTable` to fail if touched, `test_pipeline_status_bad_params`, `test_dq_scores_bad_params` assert no DB connect). Covered attempts include `' OR '1'='1`, `; DROP TABLE`, path traversal `../`, trailing newline, Arabic-Indic digits and wrong JSON types. |
+| MCP06 Prompt injection via contextual payloads | Mitigated (low residual, L1) | Outputs are typed rows from pipeline-owned tables: ids, dates, numbers, states and check names. No free text columns (`details`, raw `payload`) are returned. The server takes no action based on returned content. |
+| MCP07 Insufficient authentication and authorization | Mitigated | Every path except `GET /health` needs `Authorization: Bearer <MCP_TOKEN>`; missing, wrong, empty or non-Bearer values get 401 with `WWW-Authenticate: Bearer` (`test_missing_token_is_401`, `test_wrong_token_is_401`). Origin outside `MCP_ALLOWED_ORIGINS` gets 403 before any other handling, which blocks DNS rebinding from browsers (`test_bad_origin_is_403`); no Origin header is allowed per contract. Default bind `127.0.0.1:8765`; compose binds `0.0.0.0` in the container and publishes only on `127.0.0.1` (`test_main_binds_per_contract`). `/health` returns the literal `ok` and no data. |
+| MCP08 Lack of audit and telemetry | Mitigated (low residual, L2) | Each tool call writes one JSON line `{ts, tool, params, caller_origin, status, row_count, duration_ms}` to stdout and `MCP_AUDIT_LOG`, for success and error. Denied requests (401, 403) are also logged with `tool: null` (`test_denied_requests_are_audited_without_token`). |
+| MCP09 Shadow MCP servers | Mitigated | One server, defined in compose as service `mcp` with a fixed image tag, healthcheck and `mem_limit`. Listed in `docs/map.md` and `docs/contracts/env.md`. No stdio or SSE transports are exposed. |
+| MCP10 Context injection and over-sharing | Mitigated | Row caps: `pipeline_status` 1 to 50, `dq_scores` 1 to 100, `top_products` 1 to 50, every gold query at most 1000 rows (`test_gold_row_cap`). Only contract columns are selected. Stateless HTTP mode, so no context is kept between calls or callers. Errors do not echo filesystem paths (`test_gold_missing_table_is_error`). Request body size uses the SDK default cap. |
+
+## Accepted low findings
+
+| Id | Finding | Why accepted |
+|---|---|---|
+| L1 | `check_name` and `table_name` strings from `quality.dq_results` reach the model unchanged. | Written only by the pipeline role; `mcp_ro` cannot write. Values are short identifiers. |
+| L2 | Arguments with the wrong JSON type (for example `limit: "abc"`) are rejected by the SDK schema check before the tool runs, so they appear in the SDK log but not in the audit log. | Nothing is read for them; range and format failures inside the tools are audited. |
+| L3 | One shared static bearer token, no rate limiting, no per-caller identity. | Local single-user stack bound to loopback; the contract defines a single token. Rotate by changing `MCP_TOKEN` and restarting the service. |
