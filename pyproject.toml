@@ -1,0 +1,61 @@
+[project]
+name = "cloud-data-pipeline"
+version = "0.1.0"
+requires-python = "==3.11.*"
+dependencies = [
+    "boto3>=1.35",
+    "confluent-kafka>=2.6",
+    "deltalake>=0.22",
+    "jsonschema>=4.23",
+    "mcp>=1.9",
+    "opentelemetry-exporter-otlp-proto-http>=1.29",
+    "opentelemetry-sdk>=1.29",
+    "psycopg2-binary>=2.9.10",
+    "pyarrow>=18",
+    "redis>=5.2",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.8",
+    "mypy>=1.13",
+    "pip-audit>=2.7",
+    "playwright>=1.49",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "requests>=2.32",
+    "ruff>=0.8",
+    "types-psycopg2",
+    "types-requests",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "mcp", "dags"]
+markers = [
+    "integration: needs the compose stack running",
+    "e2e: browser checks against Grafana",
+]
+addopts = "-q -m 'not integration and not e2e'"
+
+[tool.coverage.run]
+branch = true
+source = ["ingest", "quality", "finops", "mcp", "dags", "spark", "governance"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
