@@ -56,7 +56,8 @@ def trigger_spark(**context: Any) -> dict:
     url = os.environ["SPARK_TRIGGER_URL"].rstrip("/") + "/run/all"
     if not url.startswith(("http://", "https://")):
         raise AirflowException(f"SPARK_TRIGGER_URL must be http(s): {url}")
-    request = urllib.request.Request(url, method="POST")  # noqa: S310  # nosec B310 (scheme checked above)
+    # scheme is checked above, so urlopen only ever sees http or https
+    request = urllib.request.Request(url, method="POST")  # noqa: S310  # nosec B310
     with urllib.request.urlopen(request, timeout=1800) as response:  # noqa: S310  # nosec B310
         result = json.load(response)
     if result.get("status") != "ok":
