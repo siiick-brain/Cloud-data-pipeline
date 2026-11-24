@@ -1,0 +1,19 @@
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# local data and secrets
+.env
+data/
+*.log
+finops/out/
+.terraform/
+*.tfstate*
