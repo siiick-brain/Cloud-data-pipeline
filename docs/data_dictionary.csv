@@ -1,0 +1,96 @@
+table_schema,table_name,column_name,data_type,nullable,pii_tag,owner,retention_days,description
+raw,order_events,event_id,uuid,no,none,ingest,90,Event id from the producer. Primary key and dedupe key
+raw,order_events,payload,jsonb,no,none,ingest,90,Full event as received after schema validation
+raw,order_events,kafka_partition,integer,yes,none,ingest,90,Kafka partition the event came from
+raw,order_events,kafka_offset,bigint,yes,none,ingest,90,Kafka offset of the event
+raw,order_events,received_at,timestamptz,no,none,ingest,90,When the consumer inserted the row
+raw,order_events,load_date,date,no,none,ingest,90,UTC date of received_at. Partition key for loads
+raw,customers,customer_id,text,no,none,ingest,365,Natural key of the customer in the source system
+raw,customers,full_name,text,yes,name,ingest,365,Customer full name
+raw,customers,email,text,yes,email,ingest,365,Customer email address
+raw,customers,city,text,yes,none,ingest,365,Customer city
+raw,customers,address,text,yes,address,ingest,365,Customer street address
+raw,customers,updated_at,timestamptz,no,none,ingest,365,Last change time in the source. Becomes valid_from for SCD2
+raw,products,product_id,text,no,none,ingest,365,Natural key of the product
+raw,products,product_name,text,yes,none,ingest,365,Product name
+raw,products,category,text,yes,none,ingest,365,Product category
+raw,products,list_price,"numeric(10,2)",yes,none,ingest,365,Current list price in USD
+raw,products,updated_at,timestamptz,no,none,ingest,365,Last change time in the source
+raw,stores,store_id,text,no,none,ingest,365,Natural key of the store
+raw,stores,store_name,text,yes,none,ingest,365,Store name
+raw,stores,city,text,yes,none,ingest,365,Store city
+raw,stores,updated_at,timestamptz,no,none,ingest,365,Last change time in the source
+staging,fact_order_line,*,same as dw.fact_order_line,no,none,warehouse,1,Unlogged landing copy of fact rows. Truncated each ETL run
+dw,dim_customer,customer_key,integer,no,none,warehouse,1825,Surrogate key. -1 is the unknown member
+dw,dim_customer,customer_id,text,no,none,warehouse,1825,Natural key from raw.customers
+dw,dim_customer,full_name,text,yes,name,warehouse,1825,Customer full name (Type 1)
+dw,dim_customer,email,text,yes,email,warehouse,1825,Customer email (Type 1)
+dw,dim_customer,city,text,yes,none,warehouse,1825,Customer city (Type 2 tracked)
+dw,dim_customer,address,text,yes,address,warehouse,1825,Customer street address (Type 2 tracked)
+dw,dim_customer,valid_from,timestamptz,no,none,warehouse,1825,Start of the row version. First version starts at 1900-01-01
+dw,dim_customer,valid_to,timestamptz,no,none,warehouse,1825,End of the row version. 9999-12-31 for the current row
+dw,dim_customer,is_current,boolean,no,none,warehouse,1825,True for the one current row per customer_id
+dw,dim_product,product_key,integer,no,none,warehouse,1825,Surrogate key. -1 is the unknown member
+dw,dim_product,product_id,text,no,none,warehouse,1825,Natural key from raw.products
+dw,dim_product,product_name,text,yes,none,warehouse,1825,Product name (Type 1)
+dw,dim_product,category,text,yes,none,warehouse,1825,Product category (Type 1)
+dw,dim_product,list_price,"numeric(10,2)",yes,none,warehouse,1825,List price in USD (Type 1)
+dw,dim_store,store_key,integer,no,none,warehouse,1825,Surrogate key. -1 is the unknown member
+dw,dim_store,store_id,text,no,none,warehouse,1825,Natural key from raw.stores
+dw,dim_store,store_name,text,yes,none,warehouse,1825,Store name (Type 1)
+dw,dim_store,city,text,yes,none,warehouse,1825,Store city (Type 1)
+dw,dim_date,date_key,integer,no,none,warehouse,1825,YYYYMMDD integer. -1 is the unknown member
+dw,dim_date,full_date,date,yes,none,warehouse,1825,Calendar date. NULL only for the unknown member
+dw,dim_date,year,smallint,yes,none,warehouse,1825,Calendar year
+dw,dim_date,quarter,smallint,yes,none,warehouse,1825,Calendar quarter 1 to 4
+dw,dim_date,month,smallint,yes,none,warehouse,1825,Month number 1 to 12
+dw,dim_date,month_name,text,yes,none,warehouse,1825,Month name in English
+dw,dim_date,day,smallint,yes,none,warehouse,1825,Day of month
+dw,dim_date,day_of_week,smallint,yes,none,warehouse,1825,ISO day of week. 1 is Monday
+dw,dim_date,day_name,text,yes,none,warehouse,1825,Day name in English
+dw,dim_date,is_weekend,boolean,yes,none,warehouse,1825,True on Saturday and Sunday
+dw,fact_order_line,event_id,uuid,no,none,warehouse,1825,Grain: one row per order line event. Primary key
+dw,fact_order_line,order_id,text,no,none,warehouse,1825,Order id (degenerate dimension)
+dw,fact_order_line,line_number,smallint,no,none,warehouse,1825,Line number within the order
+dw,fact_order_line,customer_key,integer,no,none,warehouse,1825,FK to the dim_customer version valid at occurred_at
+dw,fact_order_line,product_key,integer,no,none,warehouse,1825,FK to dim_product
+dw,fact_order_line,store_key,integer,no,none,warehouse,1825,FK to dim_store
+dw,fact_order_line,date_key,integer,no,none,warehouse,1825,FK to dim_date for the UTC date of occurred_at
+dw,fact_order_line,quantity,integer,no,none,warehouse,1825,Units sold. Always above zero
+dw,fact_order_line,unit_price,"numeric(10,2)",no,none,warehouse,1825,Price per unit at sale time
+dw,fact_order_line,currency,char(3),no,none,warehouse,1825,ISO 4217 currency code
+dw,fact_order_line,net_amount,"numeric(12,2)",no,none,warehouse,1825,quantity times unit_price
+dw,fact_order_line,occurred_at,timestamptz,no,none,warehouse,1825,When the sale happened
+dw,fact_order_line,load_date,date,no,none,warehouse,1825,Load date partition copied from raw.order_events
+dw,fact_order_line,loaded_at,timestamptz,no,none,warehouse,1825,When the row was inserted
+gold,daily_sales,load_date,date,no,none,analytics,730,Load date partition that produced the row
+gold,daily_sales,sale_date,date,no,none,analytics,730,UTC sale date
+gold,daily_sales,store_id,text,no,none,analytics,730,Store natural key
+gold,daily_sales,order_lines,integer,no,none,analytics,730,Count of order lines
+gold,daily_sales,units,integer,no,none,analytics,730,Sum of quantity
+gold,daily_sales,revenue,"numeric(14,2)",no,none,analytics,730,Sum of net_amount
+gold,product_sales,load_date,date,no,none,analytics,730,Load date partition that produced the row
+gold,product_sales,sale_date,date,no,none,analytics,730,UTC sale date
+gold,product_sales,product_id,text,no,none,analytics,730,Product natural key
+gold,product_sales,category,text,yes,none,analytics,730,Product category
+gold,product_sales,units,integer,no,none,analytics,730,Sum of quantity
+gold,product_sales,revenue,"numeric(14,2)",no,none,analytics,730,Sum of net_amount
+quality,dq_results,id,bigint,no,none,quality,180,Row id
+quality,dq_results,run_id,text,no,none,quality,180,Airflow run id or a manual run label
+quality,dq_results,dag_id,text,yes,none,quality,180,DAG that ran the check
+quality,dq_results,check_name,text,no,none,quality,180,Check name such as not_null or freshness
+quality,dq_results,table_name,text,no,none,quality,180,Table the check ran on
+quality,dq_results,passed,boolean,no,none,quality,180,True when the check met its threshold
+quality,dq_results,observed,numeric,yes,none,quality,180,Measured value
+quality,dq_results,threshold,numeric,yes,none,quality,180,Value the check compares against
+quality,dq_results,score,"numeric(5,4)",no,none,quality,180,Score from 0 to 1
+quality,dq_results,details,text,yes,none,quality,180,Short explanation for a failure
+quality,dq_results,checked_at,timestamptz,no,none,quality,180,When the check ran
+governance,catalog,table_schema,text,no,none,governance,,Schema of the documented column
+governance,catalog,table_name,text,no,none,governance,,Table of the documented column
+governance,catalog,column_name,text,no,none,governance,,Column name
+governance,catalog,data_type,text,yes,none,governance,,Declared type
+governance,catalog,owner,text,yes,none,governance,,Team that owns the column
+governance,catalog,pii_tag,text,no,none,governance,,none email name or address
+governance,catalog,retention_days,integer,yes,none,governance,,How long rows are kept
+governance,catalog,description,text,yes,none,governance,,Plain description
