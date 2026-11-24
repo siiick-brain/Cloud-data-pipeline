@@ -1,0 +1,32 @@
+{
+  "period": {"start": "2026-10-01", "end": "2026-11-01"},
+  "currency": "USD",
+  "cost_by_service": [
+    {"service": "Amazon Elastic Compute Cloud - Compute", "amount": 412.50},
+    {"service": "Amazon Simple Storage Service", "amount": 88.20},
+    {"service": "EC2 - Other", "amount": 61.75},
+    {"service": "Amazon Relational Database Service", "amount": 240.00}
+  ],
+  "cost_by_tag": [
+    {"tag_key": "team", "tag_value": "data", "amount": 520.25},
+    {"tag_key": "team", "tag_value": "web", "amount": 220.45},
+    {"tag_key": "team", "tag_value": "untagged", "amount": 61.75}
+  ],
+  "budgets": [
+    {"name": "monthly-data-platform", "limit": 750.00, "actual": 802.45, "forecast": 845.00}
+  ],
+  "resources": [
+    {"type": "ec2_instance", "id": "i-idle-001", "state": "stopped", "tags": {"team": "data"}},
+    {"type": "ec2_instance", "id": "i-keep-001", "state": "stopped", "tags": {"keep": "true"}},
+    {"type": "ec2_instance", "id": "i-run-001", "state": "running", "tags": {"team": "web"}},
+    {"type": "ebs_volume", "id": "vol-idle-001", "state": "available", "tags": {}},
+    {"type": "ebs_volume", "id": "vol-keep-001", "state": "available", "tags": {"keep": "true"}},
+    {"type": "ebs_snapshot", "id": "snap-old-001", "age_days": 120, "tags": {}},
+    {"type": "ebs_snapshot", "id": "snap-new-001", "age_days": 5, "tags": {}},
+    {"type": "s3_bucket", "id": "empty-bucket-001", "object_count": 0, "tags": {}},
+    {"type": "s3_bucket", "id": "keep-empty-bucket", "object_count": 0, "tags": {"keep": "true"}},
+    {"type": "s3_bucket", "id": "data-bucket-001", "object_count": 12, "tags": {"team": "data"}}
+  ],
+  "idle_rules": {"snapshot_max_age_days": 90, "keep_tag": "keep", "keep_value": "true"},
+  "expected_cleanup": ["i-idle-001", "vol-idle-001", "snap-old-001", "empty-bucket-001"]
+}
