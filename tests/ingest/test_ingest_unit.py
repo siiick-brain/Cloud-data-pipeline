@@ -309,3 +309,20 @@ class FakeSeedConn:
 
     def cursor(self):
         return self
+
+
+def test_replay_retries_a_transient_watermark_failure(monkeypatch):
+    from confluent_kafka import KafkaException
+
+    class Flaky(FakeConsumer):
+        calls = 0
+
+        def get_watermark_offsets(self, tp, timeout=None, cached=False):
+            Flaky.calls += 1
+            if Flaky.calls == 1:
+                raise KafkaException("Local: Broker transport failure")
+            return (0, 0)
+
+    monkeypatch.setattr(replay_dlq.time, "sleep", lambda s: None)
+    assert replay_dlq.replay(Flaky([], high=0), FakeProducer()) == {"replayed": 0, "still_bad": 0}
+    assert Flaky.calls == 2
