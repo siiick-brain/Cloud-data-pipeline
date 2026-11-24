@@ -15,7 +15,7 @@ N_STORES = int(os.environ.get("SEED_STORES", "20"))
 
 
 def seed(conn) -> dict[str, int]:
-    rows = {
+    rows: dict[str, list[tuple]] = {
         "raw.customers": [
             (c["customer_id"], c["full_name"], c["email"], c["city"], c["address"])
             for c in generator.customers(N_CUSTOMERS)
@@ -36,7 +36,7 @@ def seed(conn) -> dict[str, int]:
             # table and column names come from the dicts above, never from input
             execute_values(
                 cur,
-                f"INSERT INTO {table} ({columns[table]}) VALUES %s ON CONFLICT DO NOTHING",  # nosec B608
+                f"INSERT INTO {table} ({columns[table]}) VALUES %s ON CONFLICT DO NOTHING",  # noqa: S608  # nosec B608
                 values,
             )
     return {table: len(values) for table, values in rows.items()}
