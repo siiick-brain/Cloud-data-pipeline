@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!uv.lock
+!docs/contracts/order_event.schema.json
+!ingest/
+ingest/**/__pycache__
+ingest/Dockerfile*
