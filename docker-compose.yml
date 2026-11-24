@@ -166,7 +166,7 @@ services:
     <<: *airflow
     mem_limit: 600m
     command: ["airflow", "webserver"]
-    ports: ["127.0.0.1:8080:8080"]
+    ports: ["127.0.0.1:${AIRFLOW_PORT:-8080}:8080"]
     depends_on:
       airflow-scheduler:
         condition: service_healthy
@@ -210,7 +210,7 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
     volumes:
       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports: ["127.0.0.1:9090:9090"]
+    ports: ["127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"]
     depends_on:
       otel-collector: {condition: service_healthy}
     healthcheck:
@@ -230,7 +230,7 @@ services:
     volumes:
       - ./dashboards/provisioning:/etc/grafana/provisioning:ro
       - ./dashboards/json:/var/lib/grafana/dashboards:ro
-    ports: ["127.0.0.1:3000:3000"]
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3000}:3000"]
     depends_on:
       postgres: {condition: service_healthy}
       prometheus: {condition: service_healthy}

@@ -67,3 +67,7 @@ Host tests: `uv run pytest` (Python 3.11, no Java, no Airflow).
 DAG tests run in the Airflow container: `docker compose run --rm airflow-scheduler python -m pytest tests/dags`.
 Spark tests run in the Spark container: `docker compose run --rm spark python3 -m pytest tests/spark`.
 Tests that need the live stack carry `@pytest.mark.integration`.
+
+## Host port overrides
+Prometheus, Grafana and Airflow host ports come from `PROMETHEUS_PORT`, `GRAFANA_PORT` and `AIRFLOW_PORT` in `.env` (defaults 9090, 3000, 8080).
+Host-side tests and scripts must read these env vars (tests/conftest.py loads `.env`) and never hard-code the port.
