@@ -1,0 +1,36 @@
+flowchart LR
+    kafka_orders_v1["kafka orders.v1"]
+    pg_raw_order_events["raw.order_events"]
+    pg_raw_customers["raw.customers"]
+    pg_dw_dim_customer["dw.dim_customer"]
+    pg_raw_products["raw.products"]
+    pg_dw_dim_product["dw.dim_product"]
+    pg_raw_stores["raw.stores"]
+    pg_dw_dim_store["dw.dim_store"]
+    pg_staging_fact_order_line["staging.fact_order_line"]
+    pg_dw_dim_date["dw.dim_date"]
+    pg_dw_fact_order_line["dw.fact_order_line"]
+    pg_gold_daily_sales["gold.daily_sales"]
+    pg_gold_product_sales["gold.product_sales"]
+    delta_bronze_order_events["delta bronze.order_events"]
+    delta_silver_order_lines["delta silver.order_lines"]
+    delta_gold_daily_sales["delta gold.daily_sales"]
+    delta_gold_product_sales["delta gold.product_sales"]
+    kafka_orders_v1 -->|ingest.consumer| pg_raw_order_events
+    pg_raw_customers -->|etl_orders| pg_dw_dim_customer
+    pg_raw_products -->|etl_orders| pg_dw_dim_product
+    pg_raw_stores -->|etl_orders| pg_dw_dim_store
+    pg_raw_order_events -->|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_customer -->|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_product -->|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_store -->|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_date -->|etl_orders| pg_staging_fact_order_line
+    pg_staging_fact_order_line -->|etl_orders| pg_dw_fact_order_line
+    pg_dw_fact_order_line -->|elt_gold| pg_gold_daily_sales
+    pg_dw_dim_store -->|elt_gold| pg_gold_daily_sales
+    pg_dw_fact_order_line -->|elt_gold| pg_gold_product_sales
+    pg_dw_dim_product -->|elt_gold| pg_gold_product_sales
+    pg_raw_order_events -->|spark.bronze| delta_bronze_order_events
+    delta_bronze_order_events -->|spark.silver| delta_silver_order_lines
+    delta_silver_order_lines -->|spark.gold| delta_gold_daily_sales
+    delta_silver_order_lines -->|spark.gold| delta_gold_product_sales
