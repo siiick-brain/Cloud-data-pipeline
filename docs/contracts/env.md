@@ -69,5 +69,5 @@ Spark tests run in the Spark container: `docker compose run --rm spark python3 -
 Tests that need the live stack carry `@pytest.mark.integration`.
 
 ## Host port overrides
-Prometheus, Grafana and Airflow host ports come from `PROMETHEUS_PORT`, `GRAFANA_PORT` and `AIRFLOW_PORT` in `.env` (defaults 9090, 3000, 8080).
+Prometheus, Grafana, Airflow and MCP host ports come from `PROMETHEUS_PORT`, `GRAFANA_PORT`, `AIRFLOW_PORT` and `MCP_PORT` in `.env` (defaults 9090, 3000, 8080, 8765). On Windows, Hyper-V can reserve 8765; `netsh int ipv4 show excludedportrange protocol=tcp` shows the ranges.
 Host-side tests and scripts must read these env vars (tests/conftest.py loads `.env`) and never hard-code the port.
