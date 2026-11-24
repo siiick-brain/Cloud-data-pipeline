@@ -4,10 +4,9 @@ set -euo pipefail
 
 airflow db migrate
 
-if ! airflow users list --output plain | awk '{print $2}' | grep -qx "${AIRFLOW_ADMIN_USER}"; then
-  airflow users create --role Admin --username "${AIRFLOW_ADMIN_USER}" --password "${AIRFLOW_ADMIN_PASSWORD}" \
-    --firstname Admin --lastname User --email admin@example.com
-fi
+# users create exits 0 and changes nothing when the user already exists
+airflow users create --role Admin --username "${AIRFLOW_ADMIN_USER}" --password "${AIRFLOW_ADMIN_PASSWORD}" \
+  --firstname Admin --lastname User --email admin@example.com
 
 # dag_run exists only after the migration, so the grant lives here and not in sql/
 python - <<'PY'
