@@ -5,11 +5,16 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import json
+import sys
 import threading
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 import pytest
+
+# Airflow puts dags/ on sys.path when it parses DAGs; pytest needs the same
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "dags"))
 
 from tests.quality.conftest import memory_otel  # noqa: F401  (autouse in-memory telemetry)
 
