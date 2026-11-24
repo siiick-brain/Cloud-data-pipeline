@@ -48,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def make_server(port: int = 8000) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer(("0.0.0.0", port), Handler)  # noqa: S104 - compose network only
+    return ThreadingHTTPServer(("0.0.0.0", port), Handler)  # noqa: S104  # nosec B104 - container port, never published to the host
 
 
 def main() -> None:
