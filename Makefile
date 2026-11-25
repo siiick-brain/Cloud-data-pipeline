@@ -52,13 +52,15 @@ test-e2e:
 lint:
 	uv run ruff check .
 	uv run mypy ingest quality finops governance mcp/pipeline_mcp
-	uv run bandit -q -r ingest quality finops governance mcp dags spark
+	uv run bandit -q -ll -r ingest quality finops governance mcp dags spark
 
 audit:
-	uv run bandit -q -r ingest quality finops governance mcp dags spark
+	uv run bandit -q -ll -r ingest quality finops governance mcp dags spark
 	uv run pip-audit --strict --progress-spinner off
-	docker run --rm -v "$(CURDIR):/repo" $(GITLEAKS) git /repo --no-banner
-	docker run --rm -v "$(CURDIR):/repo" $(TRIVY) fs --scanners vuln,secret,misconfig --severity HIGH,MEDIUM,CRITICAL --exit-code 1 /repo
+	# run as the checkout owner, otherwise git refuses the repo as dubious ownership
+	docker run --rm --user "$$(id -u):$$(id -g)" -v "$(CURDIR):/repo" $(GITLEAKS) git /repo --no-banner
+	docker run --rm -v "$(CURDIR):/repo:ro" $(TRIVY) fs --scanners vuln,secret,misconfig --severity HIGH,MEDIUM,CRITICAL \
+		--skip-dirs /repo/.venv --skip-dirs /repo/.git --skip-files /repo/.coverage --exit-code 1 /repo
 	for f in ingest/Dockerfile mcp/Dockerfile dags/Dockerfile spark/Dockerfile infra/otel.Dockerfile; do \
 		docker run --rm -i $(HADOLINT) < $$f || exit 1; done
 
