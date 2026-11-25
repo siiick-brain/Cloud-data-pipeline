@@ -43,7 +43,16 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "currencyUSD"
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": []
       }
@@ -74,7 +83,20 @@
           "rawQuery": true,
           "rawSql": "SELECT coalesce(sum(units), 0) AS units FROM gold.daily_sales WHERE $__timeFilter(sale_date)"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 3,
@@ -102,7 +124,20 @@
           "rawQuery": true,
           "rawSql": "SELECT coalesce(sum(order_lines), 0) AS order_lines FROM gold.daily_sales WHERE $__timeFilter(sale_date)"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 4,
@@ -130,7 +165,20 @@
           "rawQuery": true,
           "rawSql": "SELECT count(DISTINCT product_id) AS products FROM gold.product_sales WHERE $__timeFilter(sale_date)"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      }
     },
     {
       "id": 5,
@@ -232,6 +280,13 @@
           "unit": "currencyUSD"
         },
         "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": true,
+          "calcs": [],
+          "fields": ""
+        }
       }
     },
     {
