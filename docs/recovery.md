@@ -13,7 +13,7 @@ Numbers below are from the run on 2026-11-25 on a Windows 11 laptop with Docker 
 ## Why each one holds
 
 1. **No lost events.** The consumer commits Kafka offsets only after the PostgreSQL insert commits. A kill before the offset commit means the batch is read again.
-   **No duplicates.** The raw table's primary key is `event_id` and the insert uses `ON CONFLICT DO NOTHING`, so a replayed batch adds nothing. Redis dedupe is a fast first filter, not the guarantee.
+   **No duplicates.** The raw table's primary key is `event_id` and the insert uses `ON CONFLICT DO NOTHING`, so a replayed batch adds nothing. Redis dedupe stops most repeats before the insert.
 2. The consumer retries its database connection with backoff instead of exiting. Every compose service has `restart: unless-stopped`, so the Airflow scheduler restarts on its own after it loses its metadata database.
 3. Bad events keep the original payload in the DLQ record. `python -m ingest.replay_dlq --uppercase-currency` applies a fix, validates again and republishes only events that now pass. The primary key makes a second replay harmless.
 4. Delta keeps every table version in its transaction log. The drill reads the last good version from `history()` and calls `restoreToVersion`. The pipeline's own time travel demo is `spark/time_travel.py`.
