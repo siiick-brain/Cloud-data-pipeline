@@ -1,4 +1,4 @@
-"""Ingest integration tests against `docker compose up -d postgres kafka redis` through the host ports in env.md."""
+"""Ingest integration tests against the compose kafka, redis and postgres (host ports in env.md)."""
 
 from __future__ import annotations
 
