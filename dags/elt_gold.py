@@ -68,7 +68,7 @@ def trigger_spark(**context: Any) -> dict:
 with DAG("elt_gold", description="fact to gold marts, then Spark", tags=["elt"], **DAG_KWARGS) as dag:
     (
         ExternalTaskSensor(task_id="wait_for_etl", external_dag_id="etl_orders", external_task_id="quality",
-                           mode="reschedule", poke_interval=60, timeout=6 * 3600)
+                           mode="reschedule", poke_interval=15, timeout=6 * 3600)
         >> PythonOperator(task_id="build_gold", python_callable=build_gold)
         >> PythonOperator(task_id="quality", python_callable=run_quality)
         >> PythonOperator(task_id="trigger_spark", python_callable=trigger_spark)
