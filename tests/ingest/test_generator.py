@@ -20,3 +20,14 @@ def test_events_end_near_now_and_ids_stay_seeded():
 def test_explicit_start_is_kept():
     start = datetime(2026, 1, 1, tzinfo=UTC)
     assert ts(next(generator.events(1, start=start))) == start
+
+
+def test_order_ids_never_collide_across_seeds():
+    import json
+
+    from ingest.consumer import validate
+
+    a = {(e["order_id"], e["line_number"]) for e in generator.events(300, seed=1)}
+    b = {(e["order_id"], e["line_number"]) for e in generator.events(300, seed=2)}
+    assert a.isdisjoint(b)
+    assert all(validate(json.dumps(e))[0] for e in generator.events(10, seed=999_999))

@@ -75,7 +75,8 @@ def events(
             "event_id": str(uuid.UUID(int=rng.getrandbits(128), version=4)),
             "schema_version": SCHEMA_VERSION,
             "occurred_at": (start + timedelta(seconds=i * 30)).isoformat().replace("+00:00", "Z"),
-            "order_id": f"O{i // 3:08d}",
+            # seed in the order id, so runs with different seeds never share an order
+            "order_id": f"O{seed % 10**6:06d}{i // 3:06d}",
             "line_number": i % 3 + 1,
             "customer_id": f"C{rng.randint(1, n_customers):06d}",
             "product_id": product_id,
