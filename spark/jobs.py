@@ -63,6 +63,7 @@ def get_spark() -> SparkSession:
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .config("spark.sql.session.timeZone", "UTC")
         .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.databricks.delta.snapshotPartitions", "4")  # default 50 is for big tables
         .config("spark.ui.enabled", "false")
         .getOrCreate()
     )
