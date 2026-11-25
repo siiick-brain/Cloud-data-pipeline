@@ -18,8 +18,10 @@ stamp "seed master data and load the catalog"
 exec_c consumer python -m ingest.seed
 exec_c consumer python -m governance.catalog
 
-stamp "produce ${EVENTS} events (2 percent duplicates, 1 percent malformed)"
-exec_c consumer python -m ingest.producer --events "$EVENTS" --dup-rate 0.02 --bad-rate 0.01
+# a new seed per run gives new event ids, so a second demo is not all duplicates
+SEED="${SEED:-$(( $(date +%s) % 1000000 ))}"
+stamp "produce ${EVENTS} events with seed ${SEED} (2 percent duplicates, 1 percent malformed)"
+exec_c consumer python -m ingest.producer --events "$EVENTS" --seed "$SEED" --dup-rate 0.02 --bad-rate 0.01
 
 stamp "wait for the consumer to drain the topic"
 prev=-1
