@@ -42,6 +42,7 @@ provider "aws" {
     ec2     = local.endpoint
     s3      = local.endpoint
     budgets = local.endpoint
+    kms     = local.endpoint
     sts     = local.endpoint
   }
 }
@@ -67,11 +68,26 @@ locals {
   ]...)
 }
 
+# one customer managed key encrypts every volume and bucket
+resource "aws_kms_key" "data" {
+  description         = "pipeline data at rest"
+  enable_key_rotation = true
+}
+
 resource "aws_instance" "this" {
   for_each      = local.instances
   ami           = "ami-0abcdef1234567890" # floci built-in Amazon Linux 2; change for a real account
   instance_type = "t3.micro"
   tags          = merge(each.value.tags, { Name = each.key })
+
+  metadata_options {
+    http_tokens = "required" # IMDSv2 only
+  }
+
+  root_block_device {
+    encrypted  = true
+    kms_key_id = aws_kms_key.data.arn
+  }
 }
 
 resource "aws_ec2_instance_state" "this" {
@@ -84,6 +100,8 @@ resource "aws_ebs_volume" "this" {
   for_each          = local.volumes
   availability_zone = "us-east-1a"
   size              = 1
+  encrypted         = true
+  kms_key_id        = aws_kms_key.data.arn
   tags              = merge(each.value, { Name = each.key })
 }
 
@@ -98,6 +116,34 @@ resource "aws_s3_bucket" "this" {
   bucket        = each.key
   force_destroy = true
   tags          = each.value.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "this" {
+  for_each                = aws_s3_bucket.this
+  bucket                  = each.value.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "this" {
+  for_each = aws_s3_bucket.this
+  bucket   = each.value.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  for_each = aws_s3_bucket.this
+  bucket   = each.value.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.data.arn
+    }
+  }
 }
 
 resource "aws_s3_object" "seed" {
