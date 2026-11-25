@@ -10,7 +10,7 @@ from tests.conftest import ROOT
 
 pytestmark = pytest.mark.e2e
 
-GRAFANA = f"http://localhost:{os.environ.get('GRAFANA_PORT', '3000')}"
+GRAFANA = f"http://127.0.0.1:{os.environ.get('GRAFANA_PORT', '3000')}"
 SHOTS = ROOT / "docs/screenshots"
 PANEL = '[data-testid^="data-testid Panel header"]'
 

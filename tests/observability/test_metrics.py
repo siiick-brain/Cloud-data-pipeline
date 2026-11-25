@@ -69,7 +69,7 @@ def test_otlp_instruments_reach_prometheus_with_contract_names():
          f"pip install -q --disable-pip-version-check {OTEL_PKGS} && python /obs/emit_metrics.py {run_id}"],
         check=True, timeout=300,
     )
-    url = f"http://localhost:{os.environ.get('PROMETHEUS_PORT', '9090')}/api/v1/query"
+    url = f"http://127.0.0.1:{os.environ.get('PROMETHEUS_PORT', '9090')}/api/v1/query"
     missing = set(CONTRACT_METRICS)
     deadline = time.time() + 60
     while missing and time.time() < deadline:
