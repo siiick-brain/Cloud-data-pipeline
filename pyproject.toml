@@ -43,7 +43,8 @@ addopts = "-q -m 'not integration and not e2e'"
 
 [tool.coverage.run]
 branch = true
-source = ["ingest", "quality", "finops", "mcp", "dags", "spark", "governance"]
+# dags and spark are measured inside their own containers (make test-dags, make test-spark)
+source = ["ingest", "quality", "finops", "mcp", "governance"]
 
 [tool.ruff]
 line-length = 110
