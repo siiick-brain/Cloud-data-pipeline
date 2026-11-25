@@ -164,6 +164,10 @@ services:
     mem_limit: 1000m
     restart: unless-stopped
     command: ["bash", "/opt/airflow/dags/start_scheduler.sh"]
+    # the first scheduled elt_gold run calls Spark, so Spark must be listening before it starts
+    depends_on:
+      postgres: {condition: service_healthy}
+      spark: {condition: service_healthy}
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://127.0.0.1:8974/health"]
       interval: 10s
