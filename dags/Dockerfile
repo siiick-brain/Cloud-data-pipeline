@@ -6,3 +6,5 @@ RUN pip install --no-cache-dir "apache-airflow[postgres,otel]==2.11.2" pytest==8
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.11.2/constraints-3.11.txt"
 # dags, quality, sql and tests are mounted under /opt/airflow, so `import quality` resolves from here
 ENV PYTHONPATH=/opt/airflow
+# the base image already runs as airflow; saying it here keeps the image non-root on purpose
+USER airflow
