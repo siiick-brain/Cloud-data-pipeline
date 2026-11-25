@@ -9,6 +9,9 @@ GITLEAKS := zricethezav/gitleaks:v8.30.1
 
 up:
 	@test -f .env || cp .env.example .env
+	@# one shared Fernet key so every Airflow container can decrypt Variables
+	@grep -q '^AIRFLOW_FERNET_KEY=' .env || echo 'AIRFLOW_FERNET_KEY=' >> .env
+	@grep -q '^AIRFLOW_FERNET_KEY=.' .env || python3 infra/fernet_key.py .env
 	$(COMPOSE) up -d --build --wait --wait-timeout 300
 
 down:
