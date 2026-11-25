@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0  # gitleaks scans the whole history
+      - uses: astral-sh/setup-uv@v10.4.0
+      - run: uv sync --frozen
+      - run: make lint
+      - run: make audit
+
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.4.0
+      - run: uv sync --frozen
+      - run: uv run playwright install --with-deps chromium
+      - run: cp .env.example .env
+      - name: unit tests and coverage floors (no services)
+        run: make test-unit
+      - name: stack up and demo-small
+        run: make demo-small
+      - name: integration, quality, airflow api and e2e
+        run: make test
+      - if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: screenshots
+          path: docs/screenshots
+      - if: failure()
+        run: docker compose ps && docker compose logs --tail 80
