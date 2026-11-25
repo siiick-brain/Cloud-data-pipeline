@@ -198,7 +198,12 @@
           "rawQuery": true,
           "rawSql": "SELECT checked_at, run_id, dag_id, check_name, table_name, observed, threshold, details FROM quality.dq_results WHERE NOT passed AND $__timeFilter(checked_at) ORDER BY checked_at DESC LIMIT 50"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No failures"
+        }
+      }
     }
   ]
 }
