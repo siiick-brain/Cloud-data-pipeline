@@ -1,8 +1,11 @@
 SHELL := bash
 COMPOSE := docker compose
 EVENTS ?= 100000
+HADOLINT := hadolint/hadolint:v2.14.0
+TRIVY := aquasec/trivy:0.76.2
+GITLEAKS := zricethezav/gitleaks:v8.30.1
 
-.PHONY: up down seed test test-host test-dags test-spark lint demo demo-small
+.PHONY: up down seed test test-unit test-host test-dags test-spark test-e2e lint audit demo demo-small drills
 
 up:
 	@test -f .env || cp .env.example .env
@@ -14,24 +17,53 @@ down:
 seed:
 	$(COMPOSE) exec -T consumer python -m ingest.seed
 
-test: test-host test-dags test-spark
+# fast tests that need no services
+test-unit:
+	uv run pytest -q
+
+# everything against the running stack (run make demo or demo-small first)
+test: test-host test-dags test-spark test-e2e
 
 test-host:
-	uv run pytest -m "not e2e" --cov --cov-report=term --cov-report=xml
+	# the ingest kill test runs its own consumer, so the compose one steps aside
+	$(COMPOSE) stop consumer
+	uv run pytest -q -m "not e2e" --cov --cov-report=term --cov-report=xml || ($(COMPOSE) start consumer; exit 1)
+	$(COMPOSE) start consumer
+	uv run coverage report --fail-under=80 > /dev/null
+	uv run coverage report --include='ingest/*' --fail-under=85
+	uv run coverage report --include='quality/*' --fail-under=85
+	uv run coverage report --include='finops/*' --fail-under=90
+	uv run coverage report --include='mcp/*' --fail-under=85
 
 test-dags:
-	$(COMPOSE) exec -T airflow-scheduler python -m pytest tests/dags -q
+	$(COMPOSE) run --rm --no-deps -e AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////tmp/airflow.db \
+		-e AIRFLOW__CORE__EXECUTOR=SequentialExecutor airflow-scheduler bash -c "airflow db migrate > /dev/null && python -m pytest tests/dags -q --cov=dags --cov-fail-under=75"
 
 test-spark:
-	$(COMPOSE) exec -T spark python3 -m pytest tests/spark -q
+	$(COMPOSE) run --rm --no-deps -v ./tests:/app/tests spark \
+		python3 -m pytest tests/spark -q -p no:cacheprovider --cov=spark --cov-fail-under=70
+
+test-e2e:
+	uv run pytest -q -m e2e tests/e2e
 
 lint:
 	uv run ruff check .
 	uv run mypy ingest quality finops governance mcp/pipeline_mcp
-	uv run bandit -q -r ingest quality finops governance mcp dags spark -x tests
+	uv run bandit -q -r ingest quality finops governance mcp dags spark
+
+audit:
+	uv run bandit -q -r ingest quality finops governance mcp dags spark
+	uv run pip-audit --strict --progress-spinner off
+	docker run --rm -v "$(CURDIR):/repo" $(GITLEAKS) git /repo --no-banner
+	docker run --rm -v "$(CURDIR):/repo" $(TRIVY) fs --scanners vuln,secret,misconfig --severity HIGH,MEDIUM,CRITICAL --exit-code 1 /repo
+	for f in ingest/Dockerfile mcp/Dockerfile dags/Dockerfile spark/Dockerfile infra/otel.Dockerfile; do \
+		docker run --rm -i $(HADOLINT) < $$f || exit 1; done
 
 demo: up seed
 	bash infra/demo.sh $(EVENTS)
 
 demo-small:
 	$(MAKE) demo EVENTS=10000
+
+drills:
+	bash infra/drills.sh
