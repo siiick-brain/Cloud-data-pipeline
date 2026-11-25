@@ -5,19 +5,19 @@
 ## Services (compose network name, host port on 127.0.0.1)
 | Service | Inside compose | From host | mem_limit |
 |---|---|---|---|
-| postgres | postgres:5432 | localhost:5432 | 900m |
+| postgres | postgres:5432 | localhost:5432 | 800m |
 | kafka | kafka:9092 | 127.0.0.1:9094 (not localhost: Windows tries IPv6 first) | 800m |
 | redis | redis:6379 | localhost:6379 | 200m |
 | consumer | runs `python -m ingest.consumer` | none | 300m |
 | spark | spark:8000 trigger service | none | 1500m |
-| airflow-scheduler | health on 8974 | none | 800m |
-| airflow-webserver | airflow-webserver:8080 | localhost:8080 | 600m |
+| airflow-scheduler | health on 8974 | none | 1000m |
+| airflow-webserver | airflow-webserver:8080 | localhost:8080 | 500m |
 | floci | floci:4566 | localhost:4566 | 400m |
 | otel-collector | otel-collector:4318 (OTLP HTTP), 8889 (Prometheus) | none | 200m |
 | prometheus | prometheus:9090 | localhost:9090 | 400m |
 | grafana | grafana:3000 | localhost:3000 | 300m |
 | mcp | mcp:8765 | localhost:8765 | 200m |
-Total: 6.6 GB.
+Total: 6.6 GB. Caps were rebalanced after the first demo: the scheduler peaked at 84 percent of 800m, so it took 100m from postgres (peak 83 MiB) and 100m from the webserver (peak 355 MiB).
 
 There is no separate producer service. The producer runs inside the consumer container:
 `docker compose exec consumer python -m ingest.producer --events N`.

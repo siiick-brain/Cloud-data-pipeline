@@ -39,7 +39,7 @@ x-airflow: &airflow
 services:
   postgres:
     image: postgres:16.16-alpine
-    mem_limit: 900m
+    mem_limit: 800m
     environment:
       POSTGRES_DB: warehouse
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -157,7 +157,7 @@ services:
 
   airflow-scheduler:
     <<: *airflow
-    mem_limit: 800m
+    mem_limit: 1000m
     command: ["bash", "/opt/airflow/dags/start_scheduler.sh"]
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://127.0.0.1:8974/health"]
@@ -168,7 +168,7 @@ services:
 
   airflow-webserver:
     <<: *airflow
-    mem_limit: 600m
+    mem_limit: 500m
     # starts alongside the scheduler and waits only for the schema migration
     command: ["bash", "-c", "airflow db check-migrations --migration-wait-timeout 300 && exec airflow webserver"]
     ports: ["127.0.0.1:${AIRFLOW_PORT:-8080}:8080"]
