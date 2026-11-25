@@ -1,5 +1,7 @@
 # Cloud Data Pipeline
 
+[![ci](https://github.com/siiick-brain/Cloud-data-pipeline/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/siiick-brain/Cloud-data-pipeline/actions/workflows/ci.yml)
+
 An end to end e-commerce data pipeline that runs on one laptop: streaming ingest, a Kimball star schema, a Delta lakehouse, orchestration with data quality gates, governance, dashboards, FinOps against an emulated AWS and a read-only MCP server for AI agents.
 
 ![Architecture](docs/diagrams/architecture.png)
