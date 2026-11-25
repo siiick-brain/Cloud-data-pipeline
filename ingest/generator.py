@@ -53,11 +53,16 @@ def events(
     n_customers: int = 1000,
     n_products: int = 200,
     n_stores: int = 20,
-    start: datetime = datetime(2026, 1, 1, tzinfo=UTC),
+    start: datetime | None = None,
     dup_rate: float = 0.0,
     bad_rate: float = 0.0,
 ) -> Iterator[dict]:
-    """Yield order line events. dup_rate repeats an earlier event, bad_rate breaks one field."""
+    """Yield order line events. dup_rate repeats an earlier event, bad_rate breaks one field.
+
+    Events are 30 seconds apart. Without a start they end now, so recent dashboards show them.
+    """
+    if start is None:
+        start = datetime.now(UTC).replace(microsecond=0) - timedelta(seconds=30 * max(count - 1, 0))
     rng = random.Random(seed + 3)  # noqa: S311 - seeded test data, not crypto
     prices = {p["product_id"]: p["list_price"] for p in products(n_products, seed)}
     recent: list[dict] = []
