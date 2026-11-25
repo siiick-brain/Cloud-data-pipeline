@@ -6,6 +6,7 @@ That is safe: the loader drops events it already landed.
 
 from __future__ import annotations
 
+import argparse
 import json
 import time
 from collections.abc import Callable
@@ -68,11 +69,19 @@ def replay(consumer: Any, producer: Any, fix: Fix | None = None) -> dict[str, in
     return {"replayed": len(good), "still_bad": bad}
 
 
-def main() -> None:
+def upper_currency(event: dict) -> dict:
+    return {**event, "currency": str(event.get("currency", "")).upper()}
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--uppercase-currency", action="store_true", help="uppercase currency first")
+    args = parser.parse_args(argv)
     conf = kafka_conf()
     consumer = Consumer({**conf, "group.id": "orders-dlq-replay", "enable.auto.commit": False})
     try:
-        print(replay(consumer, Producer({**conf, "enable.idempotence": True})))
+        fix = upper_currency if args.uppercase_currency else None
+        print(replay(consumer, Producer({**conf, "enable.idempotence": True}), fix))
     finally:
         consumer.close()
 

@@ -277,7 +277,7 @@ def test_replay_main(monkeypatch, capsys):
     monkeypatch.setenv("KAFKA_BOOTSTRAP", "k:9092")
     monkeypatch.setattr(replay_dlq, "Consumer", lambda conf: FakeConsumer([], high=0))
     monkeypatch.setattr(replay_dlq, "Producer", lambda conf: FakeProducer())
-    replay_dlq.main()
+    replay_dlq.main([])
     assert "replayed" in capsys.readouterr().out
 
 
@@ -326,3 +326,25 @@ def test_replay_retries_a_transient_watermark_failure(monkeypatch):
     monkeypatch.setattr(replay_dlq.time, "sleep", lambda s: None)
     assert replay_dlq.replay(Flaky([], high=0), FakeProducer()) == {"replayed": 0, "still_bad": 0}
     assert Flaky.calls == 2
+
+
+def test_producer_seed_and_currency_flags(monkeypatch):
+    seen = []
+    monkeypatch.setenv("KAFKA_BOOTSTRAP", "k:9092")
+    monkeypatch.setattr(producer, "ensure_topics", lambda conf: [])
+    monkeypatch.setattr(producer, "Producer", lambda conf: FakeProducer())
+    monkeypatch.setattr(producer, "send", lambda p, events: seen.append(list(events)) or 0)
+    producer.main(["--events", "5", "--seed", "7", "--currency", "usd"])
+    producer.main(["--events", "5"])
+    assert {e["event_id"] for e in seen[0]}.isdisjoint({e["event_id"] for e in seen[1]})
+    assert {e["currency"] for e in seen[0]} == {"usd"}
+
+
+def test_replay_main_uppercase_currency_fix(monkeypatch):
+    seen = {}
+    monkeypatch.setenv("KAFKA_BOOTSTRAP", "k:9092")
+    monkeypatch.setattr(replay_dlq, "Consumer", lambda conf: FakeConsumer([], high=0))
+    monkeypatch.setattr(replay_dlq, "Producer", lambda conf: FakeProducer())
+    monkeypatch.setattr(replay_dlq, "replay", lambda c, p, fix=None: seen.setdefault("fix", fix) and {})
+    replay_dlq.main(["--uppercase-currency"])
+    assert seen["fix"]({"currency": "usd"}) == {"currency": "USD"}

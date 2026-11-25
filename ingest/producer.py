@@ -53,11 +53,16 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--events", type=int, required=True)
     parser.add_argument("--dup-rate", type=float, default=0.0)
     parser.add_argument("--bad-rate", type=float, default=0.0)
+    parser.add_argument("--seed", type=int, default=42, help="change it to get new event ids")
+    parser.add_argument("--currency", default="USD", help="lowercase values fail the schema (DLQ drill)")
     args = parser.parse_args(argv)
     conf = kafka_conf()
     ensure_topics(conf)
     producer = Producer({**conf, "enable.idempotence": True, "linger.ms": 50})
-    events = generator.events(args.events, dup_rate=args.dup_rate, bad_rate=args.bad_rate)
+    events = (
+        {**e, "currency": args.currency} if e.get("currency") == "USD" else e
+        for e in generator.events(args.events, seed=args.seed, dup_rate=args.dup_rate, bad_rate=args.bad_rate)
+    )
     print(f"sent {send(producer, events)} events to {TOPIC}")
 
 
