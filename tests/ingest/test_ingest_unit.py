@@ -310,6 +310,9 @@ class FakeSeedConn:
     def cursor(self):
         return self
 
+    def close(self):
+        pass
+
 
 def test_replay_retries_a_transient_watermark_failure(monkeypatch):
     from confluent_kafka import KafkaException
