@@ -25,8 +25,12 @@ from psycopg2.extras import execute_values
 
 LOAD_DIMENSIONS_SQL = Path(__file__).resolve().parents[1] / "sql" / "load_dimensions.sql"
 CENT = Decimal("0.01")
+BATCH = 5000  # raw rows per fetch in extract
+RAW_SQL = "SELECT payload, load_date FROM raw.order_events WHERE load_date = %s"
 COLUMNS = ("event_id, order_id, line_number, customer_key, product_key, store_key, date_key, quantity, "
            "unit_price, currency, net_amount, occurred_at, load_date")
+# COLUMNS is a constant, never input
+STAGE_SQL = f"INSERT INTO staging.fact_order_line ({COLUMNS}) VALUES %s"  # noqa: S608  # nosec B608
 
 
 class Lookups(NamedTuple):
@@ -78,19 +82,21 @@ def extract(**context: Any) -> int:
     force_fail = Variable.get("FORCE_FAIL", default_var="") == "1"
     if force_fail and context["ti"].try_number <= 1:
         raise AirflowException("FORCE_FAIL is 1: the first try of extract fails on purpose")
+    staged = 0
     with closing(connect()) as conn, conn, conn.cursor() as cur:
-        cur.execute("SELECT payload, load_date FROM raw.order_events WHERE load_date = %s", (context["ds"],))
-        events = cur.fetchall()
         lookups = read_lookups(cur)
-        rows = [transform(payload, load_date, lookups) for payload, load_date in events]
         cur.execute("TRUNCATE staging.fact_order_line")
-        # COLUMNS is a constant, never input
-        execute_values(cur, f"INSERT INTO staging.fact_order_line ({COLUMNS}) VALUES %s",  # noqa: S608  # nosec B608
-                       rows, page_size=1000)
+        # server-side cursor streams the day in batches, so a 100k day never sits in task memory
+        with conn.cursor(name="raw_events") as src:
+            src.execute(RAW_SQL, (context["ds"],))
+            while batch := src.fetchmany(BATCH):
+                rows = [transform(payload, load_date, lookups) for payload, load_date in batch]
+                execute_values(cur, STAGE_SQL, rows, page_size=1000)
+                staged += len(rows)
     if force_fail:
         Variable.delete("FORCE_FAIL")
         os.environ.pop("AIRFLOW_VAR_FORCE_FAIL", None)
-    return len(rows)
+    return staged
 
 
 @traced
