@@ -12,7 +12,14 @@ pytestmark = pytest.mark.e2e
 
 GRAFANA = f"http://127.0.0.1:{os.environ.get('GRAFANA_PORT', '3000')}"
 SHOTS = ROOT / "docs/screenshots"
-PANEL = '[data-testid^="data-testid Panel header"]'
+PANEL = 'section[data-testid^="data-testid Panel header"]'
+MIN_PANELS = {"sales": 8, "pipeline-health": 4, "quality": 6}
+# a panel has rendered once it shows text beyond its own title (a value, axis labels, rows or a message)
+RENDERED = """n => {
+  const panels = Array.from(document.querySelectorAll('section[data-testid^="data-testid Panel header"]'));
+  const title = p => p.getAttribute('data-testid').length - 25;
+  return panels.length >= n && panels.every(p => p.innerText.length > title(p) + 1);
+}"""
 
 
 @pytest.fixture(scope="module")
@@ -34,10 +41,10 @@ def page():
 @pytest.mark.parametrize("uid", ["sales", "pipeline-health", "quality"])
 def test_dashboard_loads_with_data(page, uid):
     page.goto(f"{GRAFANA}/d/{uid}?orgId=1&kiosk")
-    page.wait_for_selector(PANEL, timeout=30_000)
-    page.wait_for_load_state("networkidle")
+    page.wait_for_function(RENDERED, arg=MIN_PANELS[uid], timeout=60_000)
+    page.wait_for_timeout(1000)  # let charts finish painting before the screenshot
     SHOTS.mkdir(parents=True, exist_ok=True)
-    page.screenshot(path=str(SHOTS / f"{uid}.png"), full_page=True)
-    assert page.locator(PANEL).count() > 0
+    page.screenshot(path=str(SHOTS / f"{uid}.png"))
+    assert page.locator(PANEL).count() >= MIN_PANELS[uid]
     assert page.locator('[data-testid="data-testid Panel status error"]').count() == 0, "panel error"
     assert page.get_by_text("No data", exact=True).count() == 0, "panel without data"
