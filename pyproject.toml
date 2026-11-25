@@ -39,7 +39,7 @@ markers = [
     "integration: needs the compose stack running",
     "e2e: browser checks against Grafana",
 ]
-addopts = "-q -m 'not integration and not e2e'"
+addopts = "-m 'not integration and not e2e'"
 
 [tool.coverage.run]
 branch = true
