@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>architecture</title>
+<style>body { margin: 24px; background: #fff; }</style></head>
+<body><pre class="mermaid">flowchart LR
+    subgraph ingest[&quot;Ingest&quot;]
+        producer[&quot;producer&lt;br/&gt;seeded generator&quot;] --&gt; kafka[(&quot;Kafka KRaft&lt;br/&gt;orders.v1&quot;)]
+        kafka --&gt; consumer[&quot;consumer&lt;br/&gt;JSON schema check&quot;]
+        consumer --&gt;|bad events| dlq[(&quot;orders.dlq.v1&quot;)]
+        consumer &lt;--&gt;|dedupe and dim cache| redis[(&quot;Redis&quot;)]
+    end
+    subgraph warehouse[&quot;PostgreSQL 16&quot;]
+        raw[(&quot;raw&quot;)] --&gt; star[(&quot;dw star schema&quot;)] --&gt; gold[(&quot;gold&quot;)]
+        quality[(&quot;quality.dq_results&quot;)]
+    end
+    subgraph lake[&quot;Spark container&quot;]
+        trigger[&quot;trigger service :8000&quot;] --&gt; delta[(&quot;Delta bronze, silver, gold&quot;)]
+    end
+    consumer --&gt; raw
+    airflow[&quot;Airflow&lt;br/&gt;etl_orders, elt_gold&quot;] --&gt; star
+    airflow --&gt; gold
+    airflow --&gt; quality
+    airflow --&gt;|POST /run/all| trigger
+    raw --&gt;|JDBC| trigger
+    subgraph obs[&quot;Observability&quot;]
+        otel[&quot;OTel collector&quot;] --&gt; prom[(&quot;Prometheus&quot;)] --&gt; grafana[&quot;Grafana&lt;br/&gt;3 dashboards&quot;]
+    end
+    consumer -.-&gt;|OTLP| otel
+    airflow -.-&gt;|OTLP| otel
+    gold --&gt; grafana
+    quality --&gt; grafana
+    mcp[&quot;MCP server&lt;br/&gt;read only&quot;] --&gt; quality
+    mcp --&gt; delta
+    mcp --&gt; airflowdb[(&quot;Airflow dag_run&quot;)]
+    finops[&quot;finops&lt;br/&gt;cost report, cleanup&quot;] --&gt; floci[(&quot;floci&lt;br/&gt;local AWS&quot;)]
+</pre>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize(Object.assign({startOnLoad: true}, {theme: 'base', themeVariables: {fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '15px', primaryColor: '#e8f1fb', primaryBorderColor: '#2b6cb0', primaryTextColor: '#1a202c', lineColor: '#4a5568', clusterBkg: '#f7fafc', clusterBorder: '#a0aec0'}}));</script>
+</body></html>

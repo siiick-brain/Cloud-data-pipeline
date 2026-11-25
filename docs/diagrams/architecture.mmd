@@ -1,0 +1,31 @@
+flowchart LR
+    subgraph ingest["Ingest"]
+        producer["producer<br/>seeded generator"] --> kafka[("Kafka KRaft<br/>orders.v1")]
+        kafka --> consumer["consumer<br/>JSON schema check"]
+        consumer -->|bad events| dlq[("orders.dlq.v1")]
+        consumer <-->|dedupe and dim cache| redis[("Redis")]
+    end
+    subgraph warehouse["PostgreSQL 16"]
+        raw[("raw")] --> star[("dw star schema")] --> gold[("gold")]
+        quality[("quality.dq_results")]
+    end
+    subgraph lake["Spark container"]
+        trigger["trigger service :8000"] --> delta[("Delta bronze, silver, gold")]
+    end
+    consumer --> raw
+    airflow["Airflow<br/>etl_orders, elt_gold"] --> star
+    airflow --> gold
+    airflow --> quality
+    airflow -->|POST /run/all| trigger
+    raw -->|JDBC| trigger
+    subgraph obs["Observability"]
+        otel["OTel collector"] --> prom[("Prometheus")] --> grafana["Grafana<br/>3 dashboards"]
+    end
+    consumer -.->|OTLP| otel
+    airflow -.->|OTLP| otel
+    gold --> grafana
+    quality --> grafana
+    mcp["MCP server<br/>read only"] --> quality
+    mcp --> delta
+    mcp --> airflowdb[("Airflow dag_run")]
+    finops["finops<br/>cost report, cleanup"] --> floci[("floci<br/>local AWS")]

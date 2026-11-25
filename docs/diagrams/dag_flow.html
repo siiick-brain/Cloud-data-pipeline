@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>dag_flow</title>
+<style>body { margin: 24px; background: #fff; }</style></head>
+<body><pre class="mermaid">flowchart LR
+    subgraph etl[&quot;etl_orders (daily)&quot;]
+        ld[&quot;load_dimensions&lt;br/&gt;SCD2 customer&quot;] --&gt; ex[&quot;extract&lt;br/&gt;Python transform to staging&quot;] --&gt; lf[&quot;load_fact&lt;br/&gt;on conflict do nothing&quot;] --&gt; q1[&quot;quality&quot;]
+    end
+    subgraph elt[&quot;elt_gold (daily)&quot;]
+        w[&quot;wait_for_etl&lt;br/&gt;sensor on etl quality&quot;] --&gt; bg[&quot;build_gold&lt;br/&gt;delete and insert one load_date&quot;] --&gt; q2[&quot;quality&quot;] --&gt; ts[&quot;trigger_spark&lt;br/&gt;POST /run/all&quot;]
+    end
+    q1 -.-&gt; w
+    ex -.-&gt;|FORCE_FAIL=1: first try fails, retry succeeds and clears the flag| ex
+</pre>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize(Object.assign({startOnLoad: true}, {theme: 'base', themeVariables: {fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '15px', primaryColor: '#e8f1fb', primaryBorderColor: '#2b6cb0', primaryTextColor: '#1a202c', lineColor: '#4a5568', clusterBkg: '#f7fafc', clusterBorder: '#a0aec0'}}));</script>
+</body></html>

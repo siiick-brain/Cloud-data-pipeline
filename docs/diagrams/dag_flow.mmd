@@ -1,0 +1,9 @@
+flowchart LR
+    subgraph etl["etl_orders (daily)"]
+        ld["load_dimensions<br/>SCD2 customer"] --> ex["extract<br/>Python transform to staging"] --> lf["load_fact<br/>on conflict do nothing"] --> q1["quality"]
+    end
+    subgraph elt["elt_gold (daily)"]
+        w["wait_for_etl<br/>sensor on etl quality"] --> bg["build_gold<br/>delete and insert one load_date"] --> q2["quality"] --> ts["trigger_spark<br/>POST /run/all"]
+    end
+    q1 -.-> w
+    ex -.->|FORCE_FAIL=1: first try fails, retry succeeds and clears the flag| ex

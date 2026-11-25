@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>data_flow</title>
+<style>body { margin: 24px; background: #fff; }</style></head>
+<body><pre class="mermaid">flowchart TB
+    gen[&quot;generator: 100k events&lt;br/&gt;2% duplicates, 1% malformed&quot;] --&gt; topic[(&quot;orders.v1&quot;)]
+    topic --&gt; validate{&quot;schema valid?&quot;}
+    validate --&gt;|no| dlq[(&quot;orders.dlq.v1&quot;)]
+    dlq --&gt;|replay_dlq with a fix| topic
+    validate --&gt;|yes| dedupe{&quot;seen in Redis?&quot;}
+    dedupe --&gt;|yes| drop[&quot;counted as duplicate&quot;]
+    dedupe --&gt;|no| raw[(&quot;raw.order_events&lt;br/&gt;insert on conflict do nothing&quot;)]
+    raw --&gt; stage[(&quot;staging.fact_order_line&quot;)]
+    stage --&gt;|on conflict do nothing| fact[(&quot;dw.fact_order_line&quot;)]
+    fact --&gt;|replace one load_date in a transaction| gold[(&quot;gold.daily_sales&lt;br/&gt;gold.product_sales&quot;)]
+    raw --&gt;|JDBC| bronze[(&quot;Delta bronze&quot;)] --&gt;|MERGE on event_id| silver[(&quot;Delta silver&quot;)] --&gt; dgold[(&quot;Delta gold&quot;)]
+</pre>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize(Object.assign({startOnLoad: true}, {theme: 'base', themeVariables: {fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '15px', primaryColor: '#e8f1fb', primaryBorderColor: '#2b6cb0', primaryTextColor: '#1a202c', lineColor: '#4a5568', clusterBkg: '#f7fafc', clusterBorder: '#a0aec0'}}));</script>
+</body></html>

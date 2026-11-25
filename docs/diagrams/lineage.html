@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>lineage</title>
+<style>body { margin: 24px; background: #fff; }</style></head>
+<body><pre class="mermaid">flowchart LR
+    kafka_orders_v1[&quot;kafka orders.v1&quot;]
+    pg_raw_order_events[&quot;raw.order_events&quot;]
+    pg_raw_customers[&quot;raw.customers&quot;]
+    pg_dw_dim_customer[&quot;dw.dim_customer&quot;]
+    pg_raw_products[&quot;raw.products&quot;]
+    pg_dw_dim_product[&quot;dw.dim_product&quot;]
+    pg_raw_stores[&quot;raw.stores&quot;]
+    pg_dw_dim_store[&quot;dw.dim_store&quot;]
+    pg_staging_fact_order_line[&quot;staging.fact_order_line&quot;]
+    pg_dw_dim_date[&quot;dw.dim_date&quot;]
+    pg_dw_fact_order_line[&quot;dw.fact_order_line&quot;]
+    pg_gold_daily_sales[&quot;gold.daily_sales&quot;]
+    pg_gold_product_sales[&quot;gold.product_sales&quot;]
+    delta_bronze_order_events[&quot;delta bronze.order_events&quot;]
+    delta_silver_order_lines[&quot;delta silver.order_lines&quot;]
+    delta_gold_daily_sales[&quot;delta gold.daily_sales&quot;]
+    delta_gold_product_sales[&quot;delta gold.product_sales&quot;]
+    kafka_orders_v1 --&gt;|ingest.consumer| pg_raw_order_events
+    pg_raw_customers --&gt;|etl_orders| pg_dw_dim_customer
+    pg_raw_products --&gt;|etl_orders| pg_dw_dim_product
+    pg_raw_stores --&gt;|etl_orders| pg_dw_dim_store
+    pg_raw_order_events --&gt;|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_customer --&gt;|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_product --&gt;|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_store --&gt;|etl_orders| pg_staging_fact_order_line
+    pg_dw_dim_date --&gt;|etl_orders| pg_staging_fact_order_line
+    pg_staging_fact_order_line --&gt;|etl_orders| pg_dw_fact_order_line
+    pg_dw_fact_order_line --&gt;|elt_gold| pg_gold_daily_sales
+    pg_dw_dim_store --&gt;|elt_gold| pg_gold_daily_sales
+    pg_dw_fact_order_line --&gt;|elt_gold| pg_gold_product_sales
+    pg_dw_dim_product --&gt;|elt_gold| pg_gold_product_sales
+    pg_raw_order_events --&gt;|spark.bronze| delta_bronze_order_events
+    delta_bronze_order_events --&gt;|spark.silver| delta_silver_order_lines
+    delta_silver_order_lines --&gt;|spark.gold| delta_gold_daily_sales
+    delta_silver_order_lines --&gt;|spark.gold| delta_gold_product_sales
+</pre>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<script>mermaid.initialize(Object.assign({startOnLoad: true}, {theme: 'base', themeVariables: {fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '15px', primaryColor: '#e8f1fb', primaryBorderColor: '#2b6cb0', primaryTextColor: '#1a202c', lineColor: '#4a5568', clusterBkg: '#f7fafc', clusterBorder: '#a0aec0'}}));</script>
+</body></html>

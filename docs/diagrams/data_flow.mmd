@@ -1,0 +1,12 @@
+flowchart TB
+    gen["generator: 100k events<br/>2% duplicates, 1% malformed"] --> topic[("orders.v1")]
+    topic --> validate{"schema valid?"}
+    validate -->|no| dlq[("orders.dlq.v1")]
+    dlq -->|replay_dlq with a fix| topic
+    validate -->|yes| dedupe{"seen in Redis?"}
+    dedupe -->|yes| drop["counted as duplicate"]
+    dedupe -->|no| raw[("raw.order_events<br/>insert on conflict do nothing")]
+    raw --> stage[("staging.fact_order_line")]
+    stage -->|on conflict do nothing| fact[("dw.fact_order_line")]
+    fact -->|replace one load_date in a transaction| gold[("gold.daily_sales<br/>gold.product_sales")]
+    raw -->|JDBC| bronze[("Delta bronze")] -->|MERGE on event_id| silver[("Delta silver")] --> dgold[("Delta gold")]
