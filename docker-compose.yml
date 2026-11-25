@@ -278,7 +278,8 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=3)"]
+      # an authenticated tools/list, so a server that answers /health but hangs on MCP shows as unhealthy
+      test: ["CMD", "python", "-c", "import os, urllib.request as u; u.urlopen(u.Request('http://127.0.0.1:8765/mcp', data=b'{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}', headers={'Authorization': 'Bearer ' + os.environ['MCP_TOKEN'], 'Accept': 'application/json, text/event-stream', 'Content-Type': 'application/json'}), timeout=5)"]
       interval: 10s
       timeout: 5s
       retries: 10
