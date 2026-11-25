@@ -4,6 +4,8 @@ An end to end e-commerce data pipeline that runs on one laptop: streaming ingest
 
 ![Architecture](docs/diagrams/architecture.png)
 
+![Demo: architecture, then the sales, pipeline health and quality dashboards after a run](docs/demo.gif)
+
 ## The problem
 
 A shop emits order line events all day. The business wants trusted daily sales numbers, and the data team wants to prove that the numbers are right. That means no lost events, no double counting, bad records quarantined instead of silently dropped, every load safe to rerun and every number traceable to its source. It also has to fit in 4 CPUs and 8 GB of RAM.
